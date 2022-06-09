@@ -20,7 +20,7 @@ class PunkBot {
         this.pubKey = new web3.PublicKey(process.env.NFT_CREATOR_KEY);
         this.signatures = [];
         this.lastSignature = [];
-        this.pollInterval = 1;
+        this.pollInterval = 3000;
         this.marketplaces = [
             "M2mx93ekt1fmXSVkTrUL9xVFHkmME8HTUi5Cyc5aF7K"
         ];
@@ -28,6 +28,7 @@ class PunkBot {
             "Magic Eden"
         ];
         this.discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
+        this.floor = 0;
     }
 
     async initDiscord() {
@@ -55,8 +56,51 @@ class PunkBot {
         channel.send({ embeds: [punkEmbed] });
     }
 
+    async sendDiscordFloor(color, title, imageURL, floor) {
+        let channel = await this.discordClient.channels.fetch('895211318020304917');
+
+        const punkEmbed = new MessageEmbed()
+    	.setColor(color)
+    	.setTitle(title)
+    	.setURL("https://magiceden.io/marketplace/fab_punks")
+    	.addFields(
+    		{ name: 'Price', value: floor },
+    	)
+    	.setImage(imageURL)
+    	.setTimestamp();
+
+        channel.send({ embeds: [punkEmbed] });
+    }
+
+    async checkFloor(floor) {
+        console.log("Checking floor...");
+        let curFloor = Math.floor(this.floor * 100) / 100;
+        let newFloor = Math.floor(floor * 100) / 100;
+
+        if(curFloor > newFloor) {
+            console.log("Punk floor is down! " + floor + " SOL");
+            await this.sendDiscordFloor("#e84127", "Punk Floor is Down!", "https://c.tenor.com/lhey0DPlkiQAAAAC/rage-red-stocks.gif", String(floor));
+        }
+        if(curFloor < newFloor) {
+            console.log("Punk floor is up! " + floor + " SOL");
+            await this.sendDiscordFloor("#63f542", "Punk Floor is up!", "https://i.pinimg.com/originals/80/77/19/807719eb8b16558936fb4867ad4ffdda.gif", String(floor));
+        }
+    }
+
+    async pollFloor(){
+        try {
+            console.log("Polling ME Floor...");
+            const { data } = await axios.get("https://api-mainnet.magiceden.dev/v2/collections/fab_punks/stats");
+            let floor = data.floorPrice / 1000000000;
+            await this.checkFloor(floor);
+            this.floor = floor;
+        } catch (error) {
+            console.log("Error getting ME Floor: ", error);
+        }
+    }
+
     async getTransactions() {
-        await timer(3000);
+        await timer(this.pollInterval);
         console.log("Fetching transactions...");
         try {
             this.signatures = await solanaCon.getSignaturesForAddress(this.pubKey, { until: this.lastSignature });
@@ -112,7 +156,6 @@ class PunkBot {
 
     async getSale() {
         for (var i = 0; i < this.signatures.length; i++) {
-            await timer(3000);
             let signature = this.signatures[(this.signatures.length - 1) - i].signature;
             let txn = await solanaCon.getTransaction(signature);
 
@@ -154,10 +197,20 @@ class PunkBot {
         this.lastSignature = await solanaCon.getSignaturesForAddress(this.pubKey, { limit: 1 });
         this.lastSignature = this.lastSignature[0].signature;
 
+        let i = 0;
+
         while(true) {
             await this.getTransactions();
             if(this.signatures) {
                 await this.getSale();
+            }
+
+            i++;
+            if(i == 1 || i == 300 || i == 600 || i == 900) {
+                await this.pollFloor();
+            }
+            if(i == 1200) {
+                i = 0;
             }
         }
     }
