@@ -6,8 +6,8 @@ const axios = require('axios');
 //    console.log("Error: No environment variables set");
 //    return;
 //}
-const solanaConnection = new web3.Connection("https://fabric.genesysgo.net", 'confirmed');
-const metaplexConnection = new Connection('mainnet-beta');
+const solanaCon = new web3.Connection("https://fabric.genesysgo.net", 'confirmed');
+const metaplexCon = new Connection('mainnet-beta');
 const { metadata: { Metadata } } = programs;
 
 
@@ -30,7 +30,7 @@ class PunkBot {
         //await timer(pollInterval);
         console.log("Fetching transactions...");
         try {
-            this.signatures = await solanaConnection.getSignaturesForAddress(this.pubKey, this.options);
+            this.signatures = await solanaCon.getSignaturesForAddress(this.pubKey, this.options);
             if(this.signatures) {
                 this.lastSignature = this.signatures[0].signature;
             }
@@ -51,7 +51,7 @@ class PunkBot {
     async getMetadata(tokenPubKey) {
         try {
             const addr = await Metadata.getPDA(tokenPubKey)
-            const resp = await Metadata.load(metaplexConnection, addr);
+            const resp = await Metadata.load(metaplexCon, addr);
             const { data } = await axios.get(resp.data.data.uri);
 
             return data;
@@ -75,7 +75,7 @@ class PunkBot {
         for (var i = 0; i < this.signatures.length; i++) {
             await timer(2000);
             let signature = this.signatures[(this.signatures.length - 1) - i].signature;
-            let txn = await solanaConnection.getTransaction(signature);
+            let txn = await solanaCon.getTransaction(signature);
 
             if (txn.meta.err == null) {
 
