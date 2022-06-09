@@ -2,7 +2,7 @@ require('dotenv').config();
 const web3 = require('@solana/web3.js');
 const { Connection, programs } = require('@metaplex/js');
 const axios = require('axios');
-const { Client, Intents } = require('discord.js');
+const { Client, Intents, MessageEmbed } = require('discord.js');
 
 
 if (!process.env.NFT_CREATOR_KEY || !process.env.DISCORD_CLIENT_TOKEN || !process.env.RPC_URL) {
@@ -36,6 +36,26 @@ class PunkBot {
         console.log(`Logged in as ${this.discordClient.user.tag}!`);
     }
 
+    async sendDiscord(date, price, signature, title, marketplace, imageURL, mint){
+        let channel = await this.discordClient.channels.fetch('895211318020304917');
+
+        const punkEmbed = new MessageEmbed()
+    	.setColor('#21d7e5')
+    	.setTitle(title)
+    	.setURL("https://magiceden.io/item-details/" + mint)
+    	.addFields(
+    		{ name: 'Price', value: price + " SOL" },
+            { name: 'Transaction', value: signature },
+            { name: 'Mint', value: mint },
+    		{ name: 'Marketplace', value: marketplace, inline: true },
+    		{ name: 'Timestamp', value: date, inline: true },
+    	)
+    	.setImage(imageURL)
+    	.setTimestamp();
+
+        channel.send({ embeds: [punkEmbed] });
+    }
+
     async getTransactions() {
         //await timer(pollInterval);
         console.log("Fetching transactions...");
@@ -49,10 +69,11 @@ class PunkBot {
         }
     }
 
-    printSale(date, price, signature, title, marketplace, imageURL) {
+    printSale(date, price, signature, title, marketplace, imageURL, mint) {
         console.log("-------------------------------------------");
         console.log(`Sale at ${date} ---> ${price} SOL`);
         console.log("Signature: ", signature);
+        console.log("Mint: ", mint);
         console.log("Name: ", title);
         console.log("Image: ", imageURL);
         console.log("Marketplace: ", marketplace);
@@ -110,9 +131,11 @@ class PunkBot {
                     if (this.marketplaces.includes(marketplaceAccount)) {
                         let snipe = await this.checkFoxSnipe(txn.meta.postTokenBalances[0].mint);
                         let metadata = await this.getMetadata(txn.meta.postTokenBalances[snipe].mint);
+                        let mint = txn.meta.postTokenBalances[snipe].mint;
 
                         if (metadata) {
-                            await this.printSale(dateString, price, signature, metadata.name, this.marketplaceNames[marketplace], metadata.image);
+                            await this.printSale(dateString, price, signature, metadata.name, this.marketplaceNames[marketplace], metadata.image, mint);
+                            await this.sendDiscord(dateString, price, signature, metadata.name, this.marketplaceNames[marketplace], metadata.image, mint);
                         } else {
                             console.log("Error: Couldn't get NFT metadata");
                         }
