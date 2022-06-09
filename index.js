@@ -50,13 +50,13 @@ class PunkBot {
 
     async getMetadata(tokenPubKey) {
         try {
-            const addr = await Metadata.getPDA(tokenPubKey)
+            const addr = await Metadata.getPDA(tokenPubKey);
             const resp = await Metadata.load(metaplexCon, addr);
             const { data } = await axios.get(resp.data.data.uri);
 
             return data;
         } catch (error) {
-            console.log("Error getting metadata: ", error)
+            console.log("Error getting metadata: ", error);
         }
     }
 
@@ -71,9 +71,17 @@ class PunkBot {
         return marketplaceAccount;
     }
 
+    async checkFoxSnipe(address) {
+        if(address == "FoXyMu5xwXre7zEoSvzViRk3nGawHUp9kUh97y2NDhcq"){
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+
     async getSale() {
         for (var i = 0; i < this.signatures.length; i++) {
-            await timer(2000);
+            await timer(3000);
             let signature = this.signatures[(this.signatures.length - 1) - i].signature;
             let txn = await solanaCon.getTransaction(signature);
 
@@ -90,7 +98,9 @@ class PunkBot {
                     let marketplace = this.marketplaces.indexOf(marketplaceAccount);
 
                     if (this.marketplaces.includes(marketplaceAccount)) {
-                        let metadata = await this.getMetadata(txn.meta.postTokenBalances[0].mint);
+                        let snipe = await this.checkFoxSnipe(txn.meta.postTokenBalances[0].mint);
+                        let metadata = await this.getMetadata(txn.meta.postTokenBalances[snipe].mint);
+
                         if (metadata) {
                             await this.printSale(dateString, price, signature, metadata.name, this.marketplaceNames[marketplace], metadata.image);
                         } else {
