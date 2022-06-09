@@ -5,10 +5,11 @@ const axios = require('axios');
 const { Client, Intents } = require('discord.js');
 
 
-//if (!process.env.PROJECT_ADDRESS || !process.env.DISCORD_URL) {
-//    console.log("Error: No environment variables set");
-//    return;
-//}
+if (!process.env.NFT_CREATOR_KEY || !process.env.DISCORD_CLIENT_TOKEN || !process.env.RPC_URL) {
+    console.log("Error: No environment variables set");
+    return;
+}
+
 const solanaCon = new web3.Connection(process.env.RPC_URL, 'confirmed');
 const metaplexCon = new Connection('mainnet-beta');
 const { metadata: { Metadata } } = programs;
@@ -16,7 +17,7 @@ const { metadata: { Metadata } } = programs;
 
 class PunkBot {
     constructor() {
-        this.pubKey = new web3.PublicKey("3hh8bFCymnULFUHKcMfQwGoF5Mt7p1pqBrUC3JHbYDiL");
+        this.pubKey = new web3.PublicKey(process.env.NFT_CREATOR_KEY);
         this.signatures = [];
         this.lastSignature = [];
         this.options = { };
