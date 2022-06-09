@@ -1,12 +1,15 @@
+require('dotenv').config();
 const web3 = require('@solana/web3.js');
 const { Connection, programs } = require('@metaplex/js');
 const axios = require('axios');
+const { Client, Intents } = require('discord.js');
+
 
 //if (!process.env.PROJECT_ADDRESS || !process.env.DISCORD_URL) {
 //    console.log("Error: No environment variables set");
 //    return;
 //}
-const solanaCon = new web3.Connection("https://fabric.genesysgo.net", 'confirmed');
+const solanaCon = new web3.Connection(process.env.RPC_URL, 'confirmed');
 const metaplexCon = new Connection('mainnet-beta');
 const { metadata: { Metadata } } = programs;
 
@@ -23,7 +26,13 @@ class PunkBot {
         ];
         this.marketplaceNames = [
             "Magic Eden"
-        ]
+        ];
+        this.discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
+    }
+
+    async initDiscord() {
+        await this.discordClient.login(process.env.DISCORD_CLIENT_TOKEN);
+        console.log(`Logged in as ${this.discordClient.user.tag}!`);
     }
 
     async getTransactions() {
@@ -116,6 +125,7 @@ class PunkBot {
 
     async run() {
         console.log("Starting bot...");
+        await this.initDiscord();
         await this.getTransactions();
         if(this.signatures) {
             await this.getSale();
