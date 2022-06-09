@@ -20,7 +20,6 @@ class PunkBot {
         this.pubKey = new web3.PublicKey(process.env.NFT_CREATOR_KEY);
         this.signatures = [];
         this.lastSignature = [];
-        this.options = { };
         this.pollInterval = 1;
         this.marketplaces = [
             "M2mx93ekt1fmXSVkTrUL9xVFHkmME8HTUi5Cyc5aF7K"
@@ -57,12 +56,13 @@ class PunkBot {
     }
 
     async getTransactions() {
-        //await timer(pollInterval);
+        await timer(3000);
         console.log("Fetching transactions...");
         try {
-            this.signatures = await solanaCon.getSignaturesForAddress(this.pubKey, this.options);
-            if(this.signatures) {
+            this.signatures = await solanaCon.getSignaturesForAddress(this.pubKey, { until: this.lastSignature });
+            if(this.signatures.length > 0) {
                 this.lastSignature = this.signatures[0].signature;
+
             }
         } catch(err) {
             console.log("Error: ", err);
@@ -150,9 +150,15 @@ class PunkBot {
     async run() {
         console.log("Starting bot...");
         await this.initDiscord();
-        await this.getTransactions();
-        if(this.signatures) {
-            await this.getSale();
+
+        this.lastSignature = await solanaCon.getSignaturesForAddress(this.pubKey, { limit: 1 });
+        this.lastSignature = this.lastSignature[0].signature;
+
+        while(true) {
+            await this.getTransactions();
+            if(this.signatures) {
+                await this.getSale();
+            }
         }
     }
 }
